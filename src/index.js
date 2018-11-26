@@ -93,7 +93,9 @@ class GCSDataStore {
 
     this.opts.gcs.file(fullKey)
       .download()
-      .then(contents => callback(null, contents))
+      .then(([contents]) =>
+        callback(null, contents)
+      )
       .catch(err => {
         if (err.code === 404) {
           callback(Errors.notFoundError(err))
@@ -113,15 +115,21 @@ class GCSDataStore {
   delete(key /* : Key */, callback /* : Callback<void> */) /* : void */ {
     const fullKey = this._getFullKey(key)
     this.opts.gcs.file(fullKey)
-      .delete()
-      .then(callback)
-      .catch(err => {
-        if (err.code === 404) {
-          callback(Errors.notFoundError(err))
-        } else {
-          callback(Errors.dbDeleteFailedError(err))
+      .delete((err) => {
+        if (err && err.code !== 404) {
+          return callback(Errors.dbDeleteFailedError(err))
         }
+        callback()
       })
+    // .then(callback)
+    // .catch(err => {
+    //   if (err.code !== 404) {
+    //   //   callback(Errors.notFoundError(err))
+    //   // } else {
+    //     callback(Errors.dbDeleteFailedError(err))
+    //   }
+    //   callback()
+    // })
   }
 
   /**
@@ -168,7 +176,7 @@ class GCSDataStore {
           return callback(null, currentKey, null)
         }
 
-        // Fetch the object Buffer from s3
+        // Fetch the object Buffer from GCS
         this.get(currentKey, (err, data) => {
           callback(err, currentKey, data)
         })
@@ -284,7 +292,7 @@ class GCSDataStore {
   }
 
   /**
-   * This will check the s3 bucket to ensure access and existence
+   * This will check the GCS bucket to ensure access and existence
    *
    * @param {function(Error)} callback
    * @returns {void}
