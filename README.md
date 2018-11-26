@@ -1,3 +1,3 @@
-# js-datastore-cs
+# js-datastore-gcs
 
 Datastore implementation with Google Cloud Storage
