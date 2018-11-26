@@ -8,7 +8,7 @@ const PATH = require('path')
  * sure multiple IPFS nodes don’t use the same bucket as a datastore at the same time.
  */
 class RepoLock {
-  constructor (datastore, lockName = '') {
+  constructor(datastore, lockName = '') {
     this.datastore = datastore
     this.lockName = lockName
   }
@@ -20,7 +20,7 @@ class RepoLock {
    * @param {string} dir
    * @returns {string}
    */
-  getLockfilePath (dir) {
+  getLockfilePath(dir) {
     return PATH.join(dir, 'repo.lock')
   }
 
@@ -31,7 +31,7 @@ class RepoLock {
    * @param {function(Error, LockCloser)} callback
    * @returns {void}
    */
-  lock (dir, callback) {
+  lock(dir, callback) {
     const lockPath = this.getLockfilePath(dir)
 
     this.locked(dir, (err, alreadyLocked) => {
@@ -51,13 +51,13 @@ class RepoLock {
   }
 
   /**
-   * Returns a LockCloser, which has a `close` method for removing the lock located at `lockPath`
-   *
-   * @param {string} lockPath
-   * @returns {LockCloser}
-   */
-  getCloser (lockPath) {
-    return {
+     * Returns a LockCloser, which has a `close` method for removing the lock located at `lockPath`
+     *
+     * @param {string} lockPath
+     * @returns {LockCloser}
+     */
+  getCloser(lockPath) {
+    const closer = {
       /**
        * Removes the lock. This can be overriden to customize how the lock is removed. This
        * is important for removing any created locks.
@@ -75,6 +75,24 @@ class RepoLock {
         })
       }
     }
+
+    const cleanup = () => {
+      console.log('\nAttempting to cleanup gracefully...')
+
+      closer.close(() => {
+        console.log('Cleanup complete, exiting.')
+        process.exit()
+      })
+    }
+
+    // listen for graceful termination
+    process.on('SIGTERM', cleanup)
+    process.on('SIGINT', cleanup)
+    process.on('SIGHUP', cleanup)
+    process.on('SIGUSR2', cleanup)
+    process.on('uncaughtException', cleanup)
+
+    return closer
   }
 
   /**
@@ -84,7 +102,7 @@ class RepoLock {
    * @param {function(Error, boolean)} callback
    * @returns {void}
    */
-  locked (dir, callback) {
+  locked(dir, callback) {
     this.datastore.get(this.getLockfilePath(dir), (err, data) => {
       if (err && err.code === 'ERR_NOT_FOUND') {
         return callback(null, false)
